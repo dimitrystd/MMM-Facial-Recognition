@@ -7,17 +7,15 @@ import numpy
 import cv2
 import os
 import glob
+from typing import List
+from ValidatedImage import ValidatedImage
 
 
 class VideoFaceMatcher:
-    EXAMPLES_BASE_DIR = '../../'
     IMAGES_DIR = './'
     VALIDATED_IMAGES_MASK = "validated_images/*/*.jpg"
 
     GRAPH_FILENAME = "facenet_celeb_ncs.graph"
-
-    # name of the opencv window
-    CV_WINDOW_NAME = "FaceNet- Multiple people"
 
     CAMERA_INDEX = 0
     REQUEST_CAMERA_WIDTH = 640
@@ -34,17 +32,24 @@ class VideoFaceMatcher:
     # Print to console from static methods by default
     send_to_node = lambda message_type, message: print('[{}] {}'.format(message_type, message))
 
-    def __init__(self, send_to_node=None):
-        self.validated_image_list = os.listdir(VideoFaceMatcher.VALIDATED_IMAGES_MASK)
+    def __init__(self, send_to_node_def=None):
         # Flag that loop should be interrupted
         self.stopped = False
-        if send_to_node is not None:
-            VideoFaceMatcher.send_to_node = send_to_node
+        if send_to_node_def is not None:
+            VideoFaceMatcher.send_to_node = send_to_node_def
 
-    def load_validated_image_list(self):
+    @staticmethod
+    def load_validated_image_list():
         validated_image_paths = glob.glob(VideoFaceMatcher.VALIDATED_IMAGES_MASK)
+        validated_images = []
+        users_list = set()
         for image_path in validated_image_paths:
             user_login = os.path.basename(os.path.dirname(image_path))
+            validated_images.append(ValidatedImage(user_login, image_path))
+            users_list.add(user_login)
+        VideoFaceMatcher.send_to_node("log", "{} photos were loaded for {} users ({})"
+                                      .format(len(validated_images), len(users_list), users_list))
+        return validated_images
 
     # Run an inference on the passed image
     # image_to_classify is the image on which an inference will be performed
@@ -76,13 +81,11 @@ class VideoFaceMatcher:
     # matching is a Boolean specifying if the image was a match.
     # returns None
     @staticmethod
-    def overlay_on_image(display_image, image_info, matching):
-        # TODO : Remove image_info
+    def overlay_on_image(display_image, matched_validated_image):
         rect_width = 10
         offset = int(rect_width / 2)
-        if image_info is not None:
-            cv2.putText(display_image, image_info, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-        if matching:
+        if matched_validated_image is not None:
+            cv2.putText(display_image, matched_validated_image.user_login, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
             # match, green rectangle
             cv2.rectangle(display_image, (0 + offset, 0 + offset),
                           (display_image.shape[1] - offset - 1, display_image.shape[0] - offset - 1),
@@ -129,20 +132,7 @@ class VideoFaceMatcher:
         for output_index in range(0, len(face1_output)):
             this_diff = numpy.square(face1_output[output_index] - face2_output[output_index])
             total_diff += this_diff
-
-        VideoFaceMatcher.send_to_node('log', 'Total Difference is: ' + str(total_diff))
         return total_diff
-
-    # handles key presses
-    # raw_key is the return value from cv2.waitkey
-    # returns False if program should end, or True if should continue
-    @staticmethod
-    def handle_keys(raw_key):
-        ascii_code = raw_key & 0xFF
-        if (ascii_code == ord('q')) or (ascii_code == ord('Q')):
-            return False
-
-        return True
 
     # start the opencv webcam streaming and pass each frame
     # from the camera to the facenet network for an inference
@@ -153,23 +143,22 @@ class VideoFaceMatcher:
     # graph is the ncsdk Graph object initialized with the facenet graph file
     #   which we will run the inference on.
     # returns None
-    def run_camera(self, valid_output, graph):
+    def run_camera(self, validated_image_list: List[ValidatedImage], graph):
         camera_device = cv2.VideoCapture(VideoFaceMatcher.CAMERA_INDEX)
         camera_device.set(cv2.CAP_PROP_FRAME_WIDTH, VideoFaceMatcher.REQUEST_CAMERA_WIDTH)
         camera_device.set(cv2.CAP_PROP_FRAME_HEIGHT, VideoFaceMatcher.REQUEST_CAMERA_HEIGHT)
 
         actual_camera_width = camera_device.get(cv2.CAP_PROP_FRAME_WIDTH)
         actual_camera_height = camera_device.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        VideoFaceMatcher.send_to_node('log', 'actual camera resolution: ' + str(actual_camera_width) + ' x ' + str(actual_camera_height))
+        VideoFaceMatcher.send_to_node('log', 'actual camera resolution: {} x {}'
+                                      .format(actual_camera_width, actual_camera_height))
 
         if (camera_device is None) or (not camera_device.isOpened()):
-            VideoFaceMatcher.send_to_node('log', 'Could not open camera.  Make sure it is plugged in.')
-            VideoFaceMatcher.send_to_node('log', 'Also, if you installed python opencv via pip or pip3 you')
-            VideoFaceMatcher.send_to_node('log', 'need to uninstall it and install from source with -D WITH_V4L=ON')
-            VideoFaceMatcher.send_to_node('log', 'Use the provided script: install-opencv-from_source.sh')
+            VideoFaceMatcher.send_to_node('log', '''Could not open camera.  Make sure it is plugged in.
+            Also, if you installed python opencv via pip or pip3 you
+            need to uninstall it and install from source with -D WITH_V4L=ON
+            Use the provided script: install-opencv-from_source.sh''')
             return
-
-        cv2.namedWindow(VideoFaceMatcher.CV_WINDOW_NAME)
 
         while not self.stopped:
             # Read image from camera,
@@ -186,38 +175,27 @@ class VideoFaceMatcher:
             min_distance = 100
             min_index = -1
 
-            for i in range(0, len(valid_output)):
-                distance = VideoFaceMatcher.face_match(valid_output[i], test_output)
+            for i in range(0, len(validated_image_list)):
+                distance = VideoFaceMatcher.face_match(validated_image_list[i].inference, test_output)
                 if distance < min_distance:
                     min_distance = distance
                     min_index = i
+            VideoFaceMatcher.send_to_node('log', 'Min distance is: {}'.format(min_distance))
 
-            if min_distance <= VideoFaceMatcher.FACE_MATCH_THRESHOLD:
-                VideoFaceMatcher.send_to_node('log', 'PASS!  File matches ' + self.validated_image_list[min_index])
-                found_match = True
+            if min_index >= 0 and min_distance <= VideoFaceMatcher.FACE_MATCH_THRESHOLD:
+                VideoFaceMatcher.send_to_node('log', 'PASS!  File matches "{}"'
+                                              .format(validated_image_list[min_index].user_login))
+                matched_image = validated_image_list[min_index]
 
             else:
-                found_match = False
+                matched_image = None
                 VideoFaceMatcher.send_to_node('log', 'FAIL!  File does not match any image.')
 
-            self.render_match_results(found_match, vid_image)
-            raw_key = cv2.waitKey(1)
-            if raw_key != -1:
-                if not VideoFaceMatcher.handle_keys(raw_key):
-                    VideoFaceMatcher.send_to_node('log', 'user pressed Q')
-                    self.stop()
-                    break
+            self.render_match_results(matched_image, vid_image)
 
-    def render_match_results(self, found_match, vid_image):
-        VideoFaceMatcher.overlay_on_image(vid_image, "", found_match)
-        # check if the window is visible, this means the user hasn't closed
-        # the window via the X button
-        prop_val = cv2.getWindowProperty(VideoFaceMatcher.CV_WINDOW_NAME, cv2.WND_PROP_ASPECT_RATIO)
-        if prop_val < 0.0:
-            VideoFaceMatcher.send_to_node('log', 'window closed')
-            self.stop()
-        # display the results and wait for user to hit a key
-        cv2.imshow(VideoFaceMatcher.CV_WINDOW_NAME, vid_image)
+    def render_match_results(self, matched_validated_image: ValidatedImage, vid_image: numpy.ndarray) -> None:
+        # Actual implementation in successor classes
+        return
 
     def stop(self):
         self.stopped = True
@@ -249,13 +227,12 @@ class VideoFaceMatcher:
         graph = device.AllocateGraph(graph_in_memory)
 
         try:
-            valid_output = []
-            for i in self.validated_image_list:
-                validated_image = cv2.imread("./validated_images/" + i)
-                VideoFaceMatcher.send_to_node('log', 'Loading validated image "{}"'.format(i))
-                valid_output.append(VideoFaceMatcher.run_inference(validated_image, graph))
+            validated_image_list = VideoFaceMatcher.load_validated_image_list()
+            for img in validated_image_list:
+                validated_image = cv2.imread(img.image_path)
+                img.inference = VideoFaceMatcher.run_inference(validated_image, graph)
             if use_camera:
-                self.run_camera(valid_output, graph)
+                self.run_camera(validated_image_list, graph)
             else:
                 input_image_filename_list = os.listdir(VideoFaceMatcher.IMAGES_DIR)
                 input_image_filename_list = [i for i in input_image_filename_list if i.endswith('.jpg')]

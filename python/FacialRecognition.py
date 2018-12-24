@@ -1,7 +1,7 @@
 import time
 import signal
 from MMConfig import MMConfig
-from VideoFaceMatcher import VideoFaceMatcher
+from VideoFaceMatcherShowInWindow import VideoFaceMatcherShowInWindow as VideoFaceMatcher
 
 MMConfig.to_node("status", "Facial recognition started...")
 
