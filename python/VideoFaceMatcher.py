@@ -7,6 +7,7 @@ import numpy
 import cv2
 import os
 import glob
+import time
 from typing import List
 from ValidatedImage import ValidatedImage
 
@@ -38,6 +39,16 @@ class VideoFaceMatcher:
         if send_to_node_def is not None:
             VideoFaceMatcher.send_to_node = send_to_node_def
 
+    def timeit(method):
+        def timed(*args, **kw):
+            ts = time.time()
+            result = method(*args, **kw)
+            te = time.time()
+            VideoFaceMatcher.send_to_node('log', '%r  %2.2f ms' % (method.__name__, (te - ts) * 1000))
+            return result
+
+        return timed
+
     @staticmethod
     def load_validated_image_list():
         validated_image_paths = glob.glob(VideoFaceMatcher.VALIDATED_IMAGES_MASK)
@@ -58,20 +69,28 @@ class VideoFaceMatcher:
     # ssd_mobilenet_graph is the Graph object from the NCAPI which will
     #    be used to peform the inference.
     @staticmethod
+    # @timeit
     def run_inference(image_to_classify, facenet_graph):
         # get a resized version of the image that is the dimensions
         # SSD Mobile net expects
-        resized_image = VideoFaceMatcher.preprocess_image(image_to_classify)
+        resized_image, face_rects = VideoFaceMatcher.preprocess_image(image_to_classify)
 
+        output = VideoFaceMatcher.calculate_vector_on_ncs(resized_image, facenet_graph)
+
+        return output, face_rects
+
+    @staticmethod
+    # @timeit
+    def calculate_vector_on_ncs(image_to_classify, facenet_graph):
         # ***************************************************************
         # Send the image to the NCS
         # ***************************************************************
-        facenet_graph.LoadTensor(resized_image.astype(numpy.float16), None)
+        facenet_graph.LoadTensor(image_to_classify.astype(numpy.float16), None)
 
         # ***************************************************************
         # Get the result from the NCS
         # ***************************************************************
-        output, user_obj = facenet_graph.GetResult()
+        output, userobj = facenet_graph.GetResult()
 
         return output
 
@@ -108,6 +127,7 @@ class VideoFaceMatcher:
     # create a preprocessed image from the source image that matches the
     # network expectations and return it
     @staticmethod
+    # @timeit
     def preprocess_image(src):
         # scale the image
         preprocessed_image = cv2.resize(src, (VideoFaceMatcher.NETWORK_WIDTH, VideoFaceMatcher.NETWORK_HEIGHT))
@@ -119,15 +139,17 @@ class VideoFaceMatcher:
         preprocessed_image = VideoFaceMatcher.whiten_image(preprocessed_image)
 
         # return the preprocessed image
-        return preprocessed_image
+        return preprocessed_image, []
 
     # determine if two images are of matching faces based on the
     # the network output for both images.
     @staticmethod
-    def face_match(face1_output, face2_output):
+    # @timeit
+    def face_match(face1_output: numpy.ndarray, face2_output: numpy.ndarray) -> float:
         if len(face1_output) != len(face2_output):
-            VideoFaceMatcher.send_to_node('log', 'length mismatch in face_match')
-            return False
+            VideoFaceMatcher.send_to_node('log', 'length mismatch in face_match. {} against {}'
+                                          .format(len(face1_output), len(face2_output)))
+            return 100
         total_diff = 0
         for output_index in range(0, len(face1_output)):
             this_diff = numpy.square(face1_output[output_index] - face2_output[output_index])
@@ -170,7 +192,7 @@ class VideoFaceMatcher:
 
             # run a single inference on the image and overwrite the
             # boxes and labels
-            test_output = VideoFaceMatcher.run_inference(vid_image, graph)
+            test_output, face_rects = VideoFaceMatcher.run_inference(vid_image, graph)
 
             min_distance = 100
             min_index = -1
@@ -191,9 +213,9 @@ class VideoFaceMatcher:
                 matched_image = None
                 VideoFaceMatcher.send_to_node('log', 'FAIL!  File does not match any image.')
 
-            self.render_match_results(matched_image, vid_image)
+            self.render_match_results(matched_image, face_rects, vid_image)
 
-    def render_match_results(self, matched_validated_image: ValidatedImage, vid_image: numpy.ndarray) -> None:
+    def render_match_results(self, matched_validated_image: ValidatedImage, face_rects: [], vid_image: numpy.ndarray) -> None:
         # Actual implementation in successor classes
         return
 
@@ -230,7 +252,7 @@ class VideoFaceMatcher:
             validated_image_list = VideoFaceMatcher.load_validated_image_list()
             for img in validated_image_list:
                 validated_image = cv2.imread(img.image_path)
-                img.inference = VideoFaceMatcher.run_inference(validated_image, graph)
+                img.inference, _ = VideoFaceMatcher.run_inference(validated_image, graph)
             if use_camera:
                 self.run_camera(validated_image_list, graph)
             else:
