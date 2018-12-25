@@ -248,7 +248,10 @@ class VideoFaceMatcher:
         device.OpenDevice()
 
         # The graph file that was created with the ncsdk compiler
-        graph_file_name = VideoFaceMatcher.GRAPH_FILENAME
+        graph_file_name = os.path.abspath(VideoFaceMatcher.GRAPH_FILENAME)
+        if not os.path.isfile(graph_file_name):
+            VideoFaceMatcher.send_to_node('log', 'Cannot find graph file "{}"'.format(graph_file_name))
+            return
 
         # read in the graph file to memory buffer
         with open(graph_file_name, mode='rb') as f:

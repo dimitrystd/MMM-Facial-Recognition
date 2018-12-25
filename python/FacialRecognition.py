@@ -1,32 +1,32 @@
-import time
+import os
+import traceback
 import signal
+import sys
 from MMConfig import MMConfig
-from VideoFaceMatcherShowInWindow import VideoFaceMatcherShowInWindow as VideoFaceMatcher
+from VideoFaceMatcherLoggedUser import VideoFaceMatcherLoggedUser as VideoFaceMatcher
+# from VideoFaceMatcherShowInWindow import VideoFaceMatcherShowInWindow as VideoFaceMatcher
 
-MMConfig.to_node("status", "Facial recognition started...")
+try:
+    # When it's ran from Node it has CWD=/home/pi/MagicMirror. As result python
+    # cannot find graph and xml
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    MMConfig.to_node("log", "Changed current working dir to {}".format(os.getcwd()))
 
-send_to_node = lambda message_type, message: MMConfig.to_node(message_type, message)
-faceMatcher = VideoFaceMatcher(send_to_node)
+    MMConfig.to_node("status", "Facial recognition started...")
+
+    send_to_node = lambda message_type, message: MMConfig.to_node(message_type, message)
+    faceMatcher = VideoFaceMatcher(10000, send_to_node)
+    # faceMatcher = VideoFaceMatcher(send_to_node)
+
+    def shutdown():
+        MMConfig.to_node("status", 'Shutdown: Cleaning up camera...')
+        faceMatcher.stop()
+        quit()
 
 
-# get camera
-# camera = MMConfig.get_camera()
+    signal.signal(signal.SIGINT, shutdown)
 
-
-def shutdown():
-    MMConfig.to_node("status", 'Shutdown: Cleaning up camera...')
-    faceMatcher.stop()
-    quit()
-
-
-signal.signal(signal.SIGINT, shutdown)
-
-faceMatcher.initialize()
-# frame = camera.read()
-
-# while True:
-#     # Sleep for x seconds specified in module config
-#     timeToSleep = MMConfig.get_interval()
-#     time.sleep(timeToSleep)
-#
-#     image = camera.read()
+    faceMatcher.initialize()
+except:
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    MMConfig.to_node("status", "Unhandled exception: {}".format(traceback.format_exception(exc_type, exc_value, exc_traceback)))
