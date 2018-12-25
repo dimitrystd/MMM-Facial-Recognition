@@ -4,13 +4,17 @@ from VideoFaceMatcher import VideoFaceMatcher
 from ValidatedImage import ValidatedImage
 
 
+# Class converts all events to one of 3 states:
+# - None - there is no face at all
+# - Unknown - At least one face present but we could not match it
+# - current_user - actual matched user login
 class VideoFaceMatcherLoggedUser(VideoFaceMatcher):
     pass
 
     def __init__(self, logout_delay: int, send_to_node_def=None):
         self.logout_delay = logout_delay
         self.current_user = None
-        self.login_timestamp = time.gmtime(0)
+        self.login_timestamp = 0
         self.last_match = None
         self.same_user_detected_in_row = 0
 
@@ -55,6 +59,6 @@ class VideoFaceMatcherLoggedUser(VideoFaceMatcher):
             # set current_user to unknown
             self.current_user = 0
             # callback to node helper
-            VideoFaceMatcher.send_to_node("login", {"user": self.current_user, "confidence": None})
+            VideoFaceMatcher.send_to_node("login", {"user": self.current_user, "confidence": 0})
 
         return

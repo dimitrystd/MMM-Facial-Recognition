@@ -2,8 +2,8 @@
   "name": "MMM-Facial-Recognition",
   "version": "1.0.1",
   "description": "A MagicMirror module to show NJ Transit bus arrival times.",
-  "engines" : {
-    "node" : ">=8.0.0",
+  "engines": {
+    "node": ">=8.0.0",
     "npm": ">= 5.0.0"
   },
   "repository": {
@@ -34,7 +34,9 @@
     "test_post_deploy": "mocha --timeout 30000 --recursive test/post_deploy/*",
     "test_all": "mocha --timeout 30000 --reporter mocha-junit-reporter --recursive test/*"
   },
-  "dependencies": {},
+  "dependencies": {
+    "python-shell": "^1.0.6"
+  },
   "devDependencies": {
     "babel-eslint": "^10.0.1",
     "chai": "^4.2.0",
