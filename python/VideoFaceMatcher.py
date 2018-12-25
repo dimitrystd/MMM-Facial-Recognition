@@ -10,6 +10,7 @@ import glob
 import time
 from typing import List
 from ValidatedImage import ValidatedImage
+from FaceDetector import FaceDetector
 
 
 class VideoFaceMatcher:
@@ -129,6 +130,14 @@ class VideoFaceMatcher:
     @staticmethod
     # @timeit
     def preprocess_image(src):
+        face_rects = FaceDetector.detect_faces(src)
+        # The original code expected only single face.
+        # If face was found then we crop only the first region and use it below
+        # If there is no face then try to process image raw camera image
+        if face_rects:
+            (x1, y1, x2, y2) = face_rects[0]
+            src = src[y1:y2, x1:x2]
+
         # scale the image
         preprocessed_image = cv2.resize(src, (VideoFaceMatcher.NETWORK_WIDTH, VideoFaceMatcher.NETWORK_HEIGHT))
 
@@ -139,7 +148,7 @@ class VideoFaceMatcher:
         preprocessed_image = VideoFaceMatcher.whiten_image(preprocessed_image)
 
         # return the preprocessed image
-        return preprocessed_image, []
+        return preprocessed_image, face_rects
 
     # determine if two images are of matching faces based on the
     # the network output for both images.
