@@ -3,14 +3,17 @@ import traceback
 import signal
 import sys
 from MMConfig import MMConfig
+
+# When it's ran from Node it has CWD=/home/pi/MagicMirror. As result python
+# cannot find graph and xml. Thus we must change CWD before importing our files
+# or implement lazy loading XML in FaceDetector
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+MMConfig.to_node("log", "Changed current working dir to {}".format(os.getcwd()))
+
 from VideoFaceMatcherLoggedUser import VideoFaceMatcherLoggedUser as VideoFaceMatcher
 # from VideoFaceMatcherShowInWindow import VideoFaceMatcherShowInWindow as VideoFaceMatcher
 
 try:
-    # When it's ran from Node it has CWD=/home/pi/MagicMirror. As result python
-    # cannot find graph and xml
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    MMConfig.to_node("log", "Changed current working dir to {}".format(os.getcwd()))
 
     MMConfig.to_node("status", "Facial recognition started...")
 

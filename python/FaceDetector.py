@@ -46,6 +46,6 @@ class FaceDetector:
             # left, top, right, bottom
             output_face_rects.append((x1, y1, x2, y2))
 
-        print("Found {} face(s)".format(len(output_face_rects)))
+        # print("Found {} face(s)".format(len(output_face_rects)))
 
         return output_face_rects

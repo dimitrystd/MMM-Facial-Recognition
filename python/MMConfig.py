@@ -19,7 +19,12 @@ class MMConfig:
 
     @classmethod
     def to_node(cls, message_type, message):
-        print(json.dumps({message_type: message}))
+        print(json.dumps(
+            {
+                "messageType": message_type,
+                "message": message
+             }
+        ))
         sys.stdout.flush()
 
     @classmethod
