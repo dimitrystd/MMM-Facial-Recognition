@@ -38,11 +38,11 @@ module.exports = nodeHelper.create({
                     break;
                 case "login":
                     // console.log(`[${self.name}] User ${self.config.users[payload.message.user - 1]} with confidence ${payload.message.confidence} logged in.`);
-                    console.log(`[${self.name}] User ${payload.message.user} with confidence ${payload.message.confidence} logged in.`);
+                    console.log(`[${self.name}] User ${payload.message.user} with confidence ${payload.message.distance} logged in.`);
                     self.sendSocketNotification("user", {
                         action: "FACIAL_RECOGNITION_LOGIN",
                         user: payload.message.user - 1,
-                        confidence: payload.message.confidence
+                        distance: payload.message.distance
                     });
                     break;
                 case "logout":
