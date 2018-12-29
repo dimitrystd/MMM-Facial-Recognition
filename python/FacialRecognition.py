@@ -11,8 +11,8 @@ from VideoFaceMatcherLoggedUser import VideoFaceMatcherLoggedUser as VideoFaceMa
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 MMConfig.to_node("log", "Changed current working dir to {}".format(os.getcwd()))
 
-
-def send_to_node(message_type, message):
+# message can be anything (strings or even object)
+def send_to_node(message_type: str, message):
     MMConfig.to_node(message_type, message)
 
 try:

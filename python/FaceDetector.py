@@ -1,11 +1,11 @@
 import cv2
 import imutils
-import os
-import json
+import numpy
 from typing import List, Tuple
 
 
-def print_to_console(message_type, message):
+# message can be anything (strings or even object)
+def print_to_console(message_type: str, message):
     print('[{}] {}'.format(message_type, message))
 
 
@@ -24,7 +24,7 @@ class FaceDetector:
     send_to_node = print_to_console
 
     @staticmethod
-    def detect_faces(source_image) -> List[Tuple[int, int, int, int]]:
+    def detect_faces(source_image: numpy.ndarray) -> List[Tuple[int, int, int, int]]:
         # Have to use delayed loading because when this class is imported from node js
         # the current CWD is not set yet correctly at this moment
         if FaceDetector.DETECTOR is None:
