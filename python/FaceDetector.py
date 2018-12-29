@@ -14,10 +14,16 @@ class FaceDetector:
     # CLASSIFIER = "haarcascade_frontalface_default.xml"        # [INFO] approx. FPS: 1.07
     # CLASSIFIER = "haarcascade_frontalface_alt.xml"            # [INFO] approx. FPS: 0.81
     CLASSIFIER = "haarcascade_frontalface_alt2.xml"             # [INFO] approx. FPS: 1.39
-    DETECTOR = cv2.CascadeClassifier(CLASSIFIER)
+    DETECTOR = None
+
 
     @staticmethod
     def detect_faces(source_image) -> List[Tuple[int, int, int, int]]:
+        # Have to use delayed loading because when this class is imported from node js
+        # the current CWD is not set yet correctly at this moment
+        if FaceDetector.DETECTOR is None:
+            FaceDetector.DETECTOR = cv2.CascadeClassifier(FaceDetector.CLASSIFIER)
+
         (source_image_height, source_image_width) = source_image.shape[:2]
         # convert the input frame from (1) BGR to grayscale (for face detection)
         gray = cv2.cvtColor(source_image, cv2.COLOR_BGR2GRAY)
