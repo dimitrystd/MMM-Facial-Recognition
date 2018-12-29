@@ -21,13 +21,13 @@ module.exports = nodeHelper.create({
 
     python_start () {
         const self = this;
-        const pyshell = new PythonShell(`modules/${this.name}/python/FacialRecognition.py`, {
+        const pyShell = new PythonShell(`modules/${this.name}/python/FacialRecognition.py`, {
             pythonPath: "python3",
             mode: "json",
             args: [JSON.stringify(this.config)]
         });
 
-        pyshell.on("message", (payload) => {
+        pyShell.on("message", (payload) => {
             if (payload.messageType) {
                 switch (payload.messageType) {
                 case "log":
@@ -37,7 +37,6 @@ module.exports = nodeHelper.create({
                     console.log(`[${self.name}] ${payload.message}`);
                     break;
                 case "login":
-                    // console.log(`[${self.name}] User ${self.config.users[payload.message.user - 1]} with confidence ${payload.message.confidence} logged in.`);
                     console.log(`[${self.name}] User ${payload.message.user} with confidence ${payload.message.distance} logged in.`);
                     self.sendSocketNotification("user", {
                         action: "FACIAL_RECOGNITION_LOGIN",
@@ -46,7 +45,6 @@ module.exports = nodeHelper.create({
                     });
                     break;
                 case "logout":
-                    // console.log(`[${self.name}] User ${self.config.users[payload.message.user - 1]} logged out.`);
                     console.log(`[${self.name}] User ${payload.message.user} logged out.`);
                     self.sendSocketNotification("user", {
                         action: "FACIAL_RECOGNITION_LOGOUT",
@@ -61,7 +59,7 @@ module.exports = nodeHelper.create({
             }
         });
 
-        pyshell.end((err) => {
+        pyShell.end((err) => {
             if (err) throw err;
             console.log(`[${self.name} finished running...`);
         });

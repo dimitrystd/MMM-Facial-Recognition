@@ -11,9 +11,9 @@
 Module.register("MMM-Facial-Recognition", {
 
     defaults: {
-        // Threshold for the confidence of a recognized face before it's considered a
+        // Threshold for the distance of a recognized face before it's considered a
         // positive match.  Confidence values below this threshold will be considered
-        // a positive match because the lower the confidence value, or distance, the
+        // a positive match because the lower the distance value, or distance, the
         // more confident the algorithm is that the face was correctly detected.
         threshold: 0.3,
         // Force the use of a usb webcam on raspberry pi
