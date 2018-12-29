@@ -32,13 +32,14 @@ class VideoFaceMatcher:
     FACE_MATCH_THRESHOLD = 0.8
 
     # Print to console from static methods by default
-    send_to_node = lambda message_type, message: print('[{}] {}'.format(message_type, message))
+    send_to_node = print_to_console
 
     def __init__(self, send_to_node_def=None):
         # Flag that loop should be interrupted
         self.stopped = False
         if send_to_node_def is not None:
             VideoFaceMatcher.send_to_node = send_to_node_def
+            FaceDetector.send_to_node = send_to_node_def
 
     def timeit(method):
         def timed(*args, **kw):

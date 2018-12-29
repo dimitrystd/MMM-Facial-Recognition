@@ -5,6 +5,10 @@ import json
 from typing import List, Tuple
 
 
+def print_to_console(message_type, message):
+    print('[{}] {}'.format(message_type, message))
+
+
 class FaceDetector:
     # Opencv crops face padding. Make it larger to increase rectangle size. Percent value
     PADDING = 15
@@ -16,12 +20,15 @@ class FaceDetector:
     CLASSIFIER = "haarcascade_frontalface_alt2.xml"             # [INFO] approx. FPS: 1.39
     DETECTOR = None
 
+    # Print to console from static methods by default
+    send_to_node = print_to_console
 
     @staticmethod
     def detect_faces(source_image) -> List[Tuple[int, int, int, int]]:
         # Have to use delayed loading because when this class is imported from node js
         # the current CWD is not set yet correctly at this moment
         if FaceDetector.DETECTOR is None:
+            FaceDetector.send_to_node("log", "Initializing face detector (classifier)")
             FaceDetector.DETECTOR = cv2.CascadeClassifier(FaceDetector.CLASSIFIER)
 
         (source_image_height, source_image_width) = source_image.shape[:2]
@@ -52,6 +59,6 @@ class FaceDetector:
             # left, top, right, bottom
             output_face_rects.append((x1, y1, x2, y2))
 
-        # print("Found {} face(s)".format(len(output_face_rects)))
+        FaceDetector.send_to_node("log", "Found {} face(s)".format(len(output_face_rects)))
 
         return output_face_rects
