@@ -11,6 +11,8 @@ import time
 from typing import List
 from ValidatedImage import ValidatedImage
 from FaceDetector import FaceDetector
+from FaceDetector import print_to_console
+from MatchedFace import MatchedFace
 
 
 class VideoFaceMatcher:
@@ -102,11 +104,12 @@ class VideoFaceMatcher:
     # matching is a Boolean specifying if the image was a match.
     # returns None
     @staticmethod
-    def overlay_on_image(display_image, matched_validated_image):
+    def overlay_on_image(display_image, matched_faces: List[MatchedFace]):
         rect_width = 10
         offset = int(rect_width / 2)
-        if matched_validated_image is not None:
-            cv2.putText(display_image, matched_validated_image.user_login, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+        if matched_faces is not None:
+            display_text = ",\n".join(map(lambda x: "{}={}".format(x.user_login, x.distance), matched_faces))
+            cv2.putText(display_image, display_text, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
             # match, green rectangle
             cv2.rectangle(display_image, (0 + offset, 0 + offset),
                           (display_image.shape[1] - offset - 1, display_image.shape[0] - offset - 1),
@@ -166,6 +169,35 @@ class VideoFaceMatcher:
             total_diff += this_diff
         return total_diff
 
+    # compare all outputs in loop. Return list of matched user logins and their distances
+    @staticmethod
+    # @timeit
+    def faces_match(validated_image_list: List[ValidatedImage], test_output: numpy.ndarray) -> List[MatchedFace]:
+
+        user_distances = {}
+        for validated_image in validated_image_list:
+            distance = VideoFaceMatcher.face_match(validated_image.inference, test_output)
+            # Set default distance
+            if validated_image.user_login not in user_distances:
+                user_distances[validated_image.user_login] = 100
+            if distance < user_distances[validated_image.user_login]:
+                user_distances[validated_image.user_login] = distance
+
+        VideoFaceMatcher.send_to_node("log", "Min distances are: {}".format(user_distances))
+
+        matched_faces = []
+        for k, v in user_distances.items():
+            if v <= VideoFaceMatcher.FACE_MATCH_THRESHOLD:
+                matched_faces.append(MatchedFace(k, v))
+                
+        if matched_faces:
+            VideoFaceMatcher.send_to_node("log", "PASS!  Matched faces: {}".format(matched_faces))
+
+        else:
+            VideoFaceMatcher.send_to_node("log", 'FAIL!  File does not match any image.')
+
+        return matched_faces
+
     # start the opencv webcam streaming and pass each frame
     # from the camera to the facenet network for an inference
     # Continue looping until the result of the camera frame inference
@@ -204,28 +236,11 @@ class VideoFaceMatcher:
             # boxes and labels
             test_output, face_rects = VideoFaceMatcher.run_inference(vid_image, graph)
 
-            min_distance = 100
-            min_index = -1
+            matched_faces = VideoFaceMatcher.faces_match(validated_image_list, test_output)
 
-            for i in range(0, len(validated_image_list)):
-                distance = VideoFaceMatcher.face_match(validated_image_list[i].inference, test_output)
-                if distance < min_distance:
-                    min_distance = distance
-                    min_index = i
-            VideoFaceMatcher.send_to_node('log', 'Min distance is: {}'.format(min_distance))
+            self.render_match_results(matched_faces, face_rects, vid_image)
 
-            if min_index >= 0 and min_distance <= VideoFaceMatcher.FACE_MATCH_THRESHOLD:
-                VideoFaceMatcher.send_to_node('log', 'PASS!  File matches "{}"'
-                                              .format(validated_image_list[min_index].user_login))
-                matched_image = validated_image_list[min_index]
-
-            else:
-                matched_image = None
-                VideoFaceMatcher.send_to_node('log', 'FAIL!  File does not match any image.')
-
-            self.render_match_results(matched_image, face_rects, vid_image)
-
-    def render_match_results(self, matched_validated_image: ValidatedImage, face_rects: [], vid_image: numpy.ndarray) -> None:
+    def render_match_results(self, matched_faces: List[MatchedFace], face_rects: [], vid_image: numpy.ndarray) -> None:
         # Actual implementation in successor classes
         return
 

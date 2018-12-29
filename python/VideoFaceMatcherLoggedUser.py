@@ -1,7 +1,8 @@
 import numpy
 import time
+from typing import List
 from VideoFaceMatcher import VideoFaceMatcher
-from ValidatedImage import ValidatedImage
+from MatchedFace import MatchedFace
 
 
 # Class converts all events to one of 3 states:
@@ -20,7 +21,7 @@ class VideoFaceMatcherLoggedUser(VideoFaceMatcher):
 
         super().__init__(send_to_node_def)
 
-    def render_match_results(self, matched_validated_image: ValidatedImage, face_rects: [], vid_image: numpy.ndarray) -> None:
+    def render_match_results(self, matched_faces: List[MatchedFace], face_rects: [], vid_image: numpy.ndarray) -> None:
         # No face found (noone face rect was found), logout user?
         if not face_rects:
             # if last detection exceeds timeout and there is someone logged in -> logout!
@@ -32,23 +33,23 @@ class VideoFaceMatcherLoggedUser(VideoFaceMatcher):
             return
 
         # We matched someone and has his name
-        if matched_validated_image is not None:
+        if matched_faces is not None:
             # Set login time
             self.login_timestamp = time.time()
             # Routine to count how many times the same user is detected
-            if matched_validated_image.user_login == self.last_match and self.same_user_detected_in_row < 2:
+            if matched_faces[0].user_login == self.last_match and self.same_user_detected_in_row < 2:
                 # if same user as last time increment same_user_detected_in_row +1
                 self.same_user_detected_in_row += 1
-            if matched_validated_image.user_login != self.last_match:
+            if matched_faces[0].user_login != self.last_match:
                 # if the user is different reset same_user_detected_in_row back to 0
                 self.same_user_detected_in_row = 0
             # A user only gets logged in if he is predicted twice in a row minimizing prediction errors.
-            if matched_validated_image.user_login != self.current_user and self.same_user_detected_in_row > 1:
-                self.current_user = matched_validated_image.user_login
+            if matched_faces[0].user_login != self.current_user and self.same_user_detected_in_row > 1:
+                self.current_user = matched_faces[0].user_login
                 # Callback current user to node helper
-                VideoFaceMatcher.send_to_node("login", {"user": self.current_user, "confidence": str(10000)})
+                VideoFaceMatcher.send_to_node("login", {"user": self.current_user, "distance": matched_faces[0].distance})
             # set last_match to current prediction
-            self.last_match = matched_validated_image.user_login
+            self.last_match = matched_faces[0].user_login
         # If we didn't match any face and current_user is not already set to unknown and last prediction match
         # was at least 5 seconds ago (to prevent unknown detection of a known user if he moves for example
         # and can't be detected correctly)
