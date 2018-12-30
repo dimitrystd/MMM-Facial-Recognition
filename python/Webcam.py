@@ -24,7 +24,7 @@ class OpenCVCapture:
         return None
 
     def stop(self):
-        print('{"status":"Terminating..."}')
+        print('{"log":"Terminating..."}')
         self.fps.stop()
         print("[INFO] elapsed time: {:.2f}".format(self.fps.elapsed()))
         print("[INFO] approx. FPS: {:.2f}".format(self.fps.fps()))

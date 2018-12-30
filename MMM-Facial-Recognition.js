@@ -44,7 +44,7 @@ Module.register("MMM-Facial-Recognition", {
         this.matchedFaces = [];
         this.loaded = false;
         this.sendSocketNotification("FACIAL_RECOGNITION_CONFIG", this.config);
-        Log.log(`Starting module: ${this.name}`);
+        Log.info(`Starting module: ${this.name}`);
     },
 
     /* build the HTML to render */

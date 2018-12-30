@@ -33,14 +33,11 @@ module.exports = nodeHelper.create({
                 case "log":
                     console.log(`[${self.name}] ${payload.message}`);
                     break;
-                case "status":
-                    console.log(`[${self.name}] ${payload.message}`);
-                    break;
                 case "login":
                     console.log(`[${self.name}] User ${payload.message.user} with confidence ${payload.message.distance} logged in.`);
                     self.sendSocketNotification("user", {
                         action: "FACIAL_RECOGNITION_LOGIN",
-                        user: payload.message.user - 1,
+                        user: payload.message.user,
                         distance: payload.message.distance
                     });
                     break;
@@ -48,7 +45,7 @@ module.exports = nodeHelper.create({
                     console.log(`[${self.name}] User ${payload.message.user} logged out.`);
                     self.sendSocketNotification("user", {
                         action: "FACIAL_RECOGNITION_LOGOUT",
-                        user: payload.message.user - 1
+                        user: payload.message.user
                     });
                     break;
                 case "matchResults":
@@ -61,7 +58,7 @@ module.exports = nodeHelper.create({
                     }
                     break;
                 default:
-                    console.log(`[${self.name}] Unsupported message was received with type "${payload.messageType}" amd message "${payload.message}".`);
+                    console.log(`[${self.name}] Unsupported message was received with type "${payload.messageType}" and message "${payload.message}".`);
                 }
             } else {
                 console.log(`[${self.name}] Unrecognized message from python ${payload}`);

@@ -17,13 +17,13 @@ def send_to_node(message_type: str, message):
 
 try:
 
-    MMConfig.to_node("status", "Facial recognition started...")
+    MMConfig.to_node("log", "Facial recognition started...")
 
     faceMatcher = VideoFaceMatcher(10000, send_to_node)
     # faceMatcher = VideoFaceMatcher(send_to_node)
 
     def shutdown():
-        MMConfig.to_node("status", 'Shutdown: Cleaning up camera...')
+        MMConfig.to_node("log", 'Shutdown: Cleaning up camera...')
         faceMatcher.stop()
         quit()
 
@@ -33,4 +33,4 @@ try:
     faceMatcher.initialize()
 except:
     exc_type, exc_value, exc_traceback = sys.exc_info()
-    MMConfig.to_node("status", "Unhandled exception: {}".format(traceback.format_exception(exc_type, exc_value, exc_traceback)))
+    MMConfig.to_node("log", "Unhandled exception: {}".format(traceback.format_exception(exc_type, exc_value, exc_traceback)))

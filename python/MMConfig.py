@@ -76,12 +76,12 @@ class MMConfig:
         if key in cls.CONFIG_DATA:
             return cls.CONFIG_DATA[key]
         else:
-            cls.to_node("status", "Could not find key \"{}\" in config".format(key))
+            cls.to_node("log", "Could not find key \"{}\" in config".format(key))
             return default_value
 
     @classmethod
     def get_camera(cls):
-        cls.to_node("status", "-" * 20)
-        cls.to_node("status", "Webcam loaded...")
-        cls.to_node("status", "-" * 20)
+        cls.to_node("log", "-" * 20)
+        cls.to_node("log", "Webcam loaded...")
+        cls.to_node("log", "-" * 20)
         return Webcam.OpenCVCapture()
