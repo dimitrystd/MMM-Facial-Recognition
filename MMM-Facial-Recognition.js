@@ -32,15 +32,51 @@ Module.register("MMM-Facial-Recognition", {
         // Boolean to toggle welcomeMessage
         welcomeMessage: true,
         // Send CURRENT_USER event to other modules
-        broadcastEvents: false
+        broadcastEvents: false,
+        // Show debug information
+        debug: true
     },
 
     /* initialize */
     start() {
         this.current_user = null;
         this.loginTimeout = null;
+        this.matchedFaces = [];
+        this.loaded = false;
         this.sendSocketNotification("FACIAL_RECOGNITION_CONFIG", this.config);
         Log.log(`Starting module: ${this.name}`);
+    },
+
+    /* build the HTML to render */
+    getDom () {
+        const wrapper = document.createElement("table");
+        wrapper.className = "small";
+
+        if (this.matchedFaces.length === 0) {
+            wrapper.innerHTML = (this.loaded) ? this.translate("noFaces") : this.translate("loading");
+            wrapper.className = "small dimmed";
+            return wrapper;
+        }
+
+        for (const mf in this.matchedFaces) {
+            const matchedFace = this.matchedFaces[mf];
+            const rowWrapper = document.createElement("tr");
+            rowWrapper.className = "normal";
+
+            const userWrapper = document.createElement("td");
+            userWrapper.className = "userlogin";
+            userWrapper.innerText = matchedFace.user_login;
+            rowWrapper.appendChild(userWrapper);
+
+            const distaneWrapper = document.createElement("td");
+            distaneWrapper.className = "distance";
+            distaneWrapper.innerText = matchedFace.distance;
+            rowWrapper.appendChild(distaneWrapper);
+
+            wrapper.appendChild(rowWrapper);
+        }
+
+        return wrapper;
     },
 
     login_user() {
@@ -142,6 +178,10 @@ Module.register("MMM-Facial-Recognition", {
                 self.logout_user();
                 self.current_user = null;
             }, this.config.logoutDelay);
+        } else if (payload.action === "FACIAL_MATCH_RESULTS") {
+            this.matchedFaces = payload.matchedFaces;
+            this.loaded = true;
+            this.updateDom();
         }
     },
 

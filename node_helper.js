@@ -51,6 +51,15 @@ module.exports = nodeHelper.create({
                         user: payload.message.user - 1
                     });
                     break;
+                case "matchResults":
+                    if (this.config.debug) {
+                        console.log(`[${self.name}] Number of matched users ${payload.message.matchedFaces.length}`);
+                        self.sendSocketNotification("user", {
+                            action: "FACIAL_MATCH_RESULTS",
+                            matchedFaces: payload.message.matchedFaces
+                        });
+                    }
+                    break;
                 default:
                     console.log(`[${self.name}] Unsupported message was received with type "${payload.messageType}" amd message "${payload.message}".`);
                 }

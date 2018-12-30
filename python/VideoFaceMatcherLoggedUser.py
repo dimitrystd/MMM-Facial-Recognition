@@ -28,7 +28,10 @@ class VideoFaceMatcherLoggedUser(VideoFaceMatcher):
     # login  - {"user": "<user name>", "distance": 0.0}
     # logout - {"user": "<user name>"}
     # Where <user name> can be: None; Stranger; real user login
+    # Also, send debug information who was matched for every video frame
+    # matchResults - {"matchedFaces": [{}]}
     def render_match_results(self, matched_faces: List[MatchedFace], face_rects: [], vid_image: numpy.ndarray) -> None:
+        VideoFaceMatcher.send_to_node("matchResults", {"matchedFaces": [mf.__dict__ for mf in matched_faces]})
         # No face found (none face rect was found), logout user?
         if not face_rects:
             # if last detection exceeds timeout and there is someone logged in -> logout!

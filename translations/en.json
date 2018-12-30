@@ -1,5 +1,7 @@
 {
   "message": "Hello, %person!",
   "strangerMessage": "Hi!",
-  "title": ""
+  "title": "",
+  "loading": "LOADING",
+  "noFaces": "No faces found"
 }
