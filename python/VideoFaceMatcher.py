@@ -9,10 +9,12 @@ import os
 import glob
 import time
 from typing import List
-from ValidatedImage import ValidatedImage
+from imutils.video import FPS
+from imutils.video import VideoStream
 from FaceDetector import FaceDetector
 from FaceDetector import print_to_console
 from MatchedFace import MatchedFace
+from ValidatedImage import ValidatedImage
 
 
 class VideoFaceMatcher:
@@ -208,37 +210,45 @@ class VideoFaceMatcher:
     #   which we will run the inference on.
     # returns None
     def run_camera(self, validated_image_list: List[ValidatedImage], graph):
-        camera_device = cv2.VideoCapture(VideoFaceMatcher.CAMERA_INDEX)
-        camera_device.set(cv2.CAP_PROP_FRAME_WIDTH, VideoFaceMatcher.REQUEST_CAMERA_WIDTH)
-        camera_device.set(cv2.CAP_PROP_FRAME_HEIGHT, VideoFaceMatcher.REQUEST_CAMERA_HEIGHT)
+        VideoFaceMatcher.send_to_node("log", "Starting video stream...")
+        camera_device = VideoStream(VideoFaceMatcher.CAMERA_INDEX)
+        camera_device.stream.stream.set(cv2.CAP_PROP_FRAME_WIDTH, VideoFaceMatcher.REQUEST_CAMERA_WIDTH)
+        camera_device.stream.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, VideoFaceMatcher.REQUEST_CAMERA_HEIGHT)
+        camera_device.start()
+        try:
+            # Allow the camera sensor to warm up
+            time.sleep(1.0)
 
-        actual_camera_width = camera_device.get(cv2.CAP_PROP_FRAME_WIDTH)
-        actual_camera_height = camera_device.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        VideoFaceMatcher.send_to_node("log", "actual camera resolution: {} x {}"
-                                      .format(actual_camera_width, actual_camera_height))
+            actual_camera_width = camera_device.stream.stream.get(cv2.CAP_PROP_FRAME_WIDTH)
+            actual_camera_height = camera_device.stream.stream.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            VideoFaceMatcher.send_to_node("log", "actual camera resolution: {} x {}"
+                                          .format(actual_camera_width, actual_camera_height))
 
-        if (camera_device is None) or (not camera_device.isOpened()):
-            VideoFaceMatcher.send_to_node("log", '''Could not open camera.  Make sure it is plugged in.
-            Also, if you installed python opencv via pip or pip3 you
-            need to uninstall it and install from source with -D WITH_V4L=ON
-            Use the provided script: install-opencv-from_source.sh''')
-            return
+            fps = FPS().start()
+            while not self.stopped:
+                # Read image from camera,
+                # ret_val, vid_image = camera_device.read()
+                vid_image = camera_device.read()
+                # if not ret_val:
+                #     VideoFaceMatcher.send_to_node("log", "No image from camera, exiting")
+                #     self.stop()
+                #     break
 
-        while not self.stopped:
-            # Read image from camera,
-            ret_val, vid_image = camera_device.read()
-            if not ret_val:
-                VideoFaceMatcher.send_to_node("log", "No image from camera, exiting")
-                self.stop()
-                break
+                fps.update()
+                # run a single inference on the image and overwrite the
+                # boxes and labels
+                test_output, face_rects = VideoFaceMatcher.run_inference(vid_image, graph)
 
-            # run a single inference on the image and overwrite the
-            # boxes and labels
-            test_output, face_rects = VideoFaceMatcher.run_inference(vid_image, graph)
+                matched_faces = VideoFaceMatcher.faces_match(validated_image_list, test_output)
 
-            matched_faces = VideoFaceMatcher.faces_match(validated_image_list, test_output)
+                self.render_match_results(matched_faces, face_rects, vid_image)
+                time.sleep(0.2)
 
-            self.render_match_results(matched_faces, face_rects, vid_image)
+            fps.stop()
+            VideoFaceMatcher.send_to_node("log", "Elapsed time: {:.2f}".format(fps.elapsed()))
+            VideoFaceMatcher.send_to_node("log", "Approx. FPS: {:.2f}".format(fps.fps()))
+        finally:
+            camera_device.stop()
 
     def render_match_results(self, matched_faces: List[MatchedFace], face_rects: [], vid_image: numpy.ndarray) -> None:
         # Actual implementation in successor classes
