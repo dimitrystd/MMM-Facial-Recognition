@@ -135,10 +135,12 @@ Module.register("MMM-Facial-Recognition", {
         }
     },
 
+    UNKNOWN_USER: "Stranger",
+
     // Override socket notification handler.
     socketNotificationReceived (notification, payload) {
         if (payload.action === "FACIAL_RECOGNITION_LOGIN") {
-            if (payload.user === -1) {
+            if (payload.user === this.UNKNOWN_USER) {
                 // this.current_user = this.translate("stranger");
                 this.current_user_id = payload.user;
                 const self = this;
@@ -158,13 +160,21 @@ Module.register("MMM-Facial-Recognition", {
             this.login_user();
 
             if (this.config.welcomeMessage) {
-                this.sendNotification("NOTIFICATION", {
-                    notification: this.translate("message").replace("%person", this.current_user),
-                    duration: 5000
+                this.sendNotification("SHOW_ALERT", {
+                    type: "notification",
+                    title: "Login",
+                    message: this.translate("message").replace("%person", this.current_user),
+                    timer: 5000
                 });
             }
         } else if (payload.action === "FACIAL_RECOGNITION_LOGOUT") {
-            if (payload.user === -1) {
+            this.sendNotification("SHOW_ALERT", {
+                type: "notification",
+                title: "Logout",
+                message: payload.user,
+                timer: 5000
+            });
+            if (payload.user === this.UNKNOWN_USER) {
                 // ignore stranger
                 return;
             }

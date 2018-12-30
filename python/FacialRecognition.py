@@ -19,7 +19,7 @@ try:
 
     MMConfig.to_node("log", "Facial recognition started...")
 
-    faceMatcher = VideoFaceMatcher(10000, send_to_node)
+    faceMatcher = VideoFaceMatcher(5000, send_to_node)
     # faceMatcher = VideoFaceMatcher(send_to_node)
 
     def shutdown():

@@ -2,6 +2,6 @@
   "message": "Hello, %person!",
   "strangerMessage": "Hi!",
   "title": "",
-  "loading": "LOADING",
+  "loading": "Loading...",
   "noFaces": "No faces found"
 }
