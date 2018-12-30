@@ -106,10 +106,10 @@ class VideoFaceMatcher:
     # matching is a Boolean specifying if the image was a match.
     # returns None
     @staticmethod
-    def overlay_on_image(display_image, matched_faces: List[MatchedFace]):
+    def overlay_on_image(display_image, matched_faces: List[MatchedFace], face_rects: []):
         rect_width = 10
         offset = int(rect_width / 2)
-        if matched_faces is not None:
+        if matched_faces:
             display_text = ",\n".join(map(lambda x: "{}={}".format(x.user_login, x.distance), matched_faces))
             cv2.putText(display_image, display_text, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
             # match, green rectangle
@@ -121,6 +121,12 @@ class VideoFaceMatcher:
             cv2.rectangle(display_image, (0 + offset, 0 + offset),
                           (display_image.shape[1] - offset - 1, display_image.shape[0] - offset - 1),
                           (0, 0, 255), 10)
+
+        # loop over the recognized faces
+        for (left, top, right, bottom) in face_rects:
+            # draw the predicted face name on the image
+            cv2.rectangle(display_image, (left, top), (right, bottom),
+                          (0, 255, 0), 2)
 
     # whiten an image
     @staticmethod

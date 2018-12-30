@@ -18,7 +18,7 @@ class VideoFaceMatcherShowInWindow(VideoFaceMatcher):
         super().run_camera(validated_image_list, graph)
 
     def render_match_results(self, matched_faces: List[MatchedFace], face_rects: [], vid_image: numpy.ndarray) -> None:
-        VideoFaceMatcher.overlay_on_image(vid_image, matched_faces)
+        VideoFaceMatcher.overlay_on_image(vid_image, matched_faces, face_rects)
         # check if the window is visible, this means the user hasn't closed
         # the window via the X button
         prop_val = cv2.getWindowProperty(VideoFaceMatcherShowInWindow.CV_WINDOW_NAME, cv2.WND_PROP_ASPECT_RATIO)
